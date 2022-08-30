@@ -65,7 +65,7 @@ jobs:
         - name: Build
           run: |
             export DOCKER_BUILDKIT=1
-            docker build --platform=linux/arm64 -t pipeor-laravel .
+            docker build --platform=linux/arm64 -t gihub-runner-lab .
 
   stop_runner:
       if: always()
