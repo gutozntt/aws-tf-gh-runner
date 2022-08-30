@@ -1,0 +1,98 @@
+name: Test Build
+on: 
+   pull_request:
+     branches:
+       - 'main'
+
+env:
+  AWS_DEFAULT_REGION: us-east-1
+  AWS_ACCESS_KEY_ID: "${{ secrets.AWS_ACCESS_KEY_ID }}"
+  AWS_SECRET_ACCESS_KEY: "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+  TF_VERSION: 1.1.7
+  TF_VAR_runner_name: github-runner
+  TF_VAR_ami: ami-05f3141013eebdc12
+  TF_VAR_instance_type: t4g.nano
+  TF_VAR_monitoring: true
+  TF_VAR_subnet_id: subnet-0e3e862a4e38ec0e1
+  TF_VAR_vpc_security_group_ids: '["sg-07108abbdfbb0a56d"]'
+  TF_VAR_region: us-east-1
+  TF_VAR_runner_architecture: ARM64
+
+jobs:
+  start_runner:
+      name: start_runner
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v2
+          with:
+            fetch-depth: 0
+        - name: Set up tfswitch
+          run: |
+            curl -L https://raw.githubusercontent.com/warrensbox/terraform-switcher/release/install.sh | sudo bash
+            tfswitch $TF_VERSION
+        - name: Start Runner
+          run: |
+            export TF_VAR_label=${GITHUB_RUN_NUMBER}
+            cd aws-tf-gh-runner
+            terraform init
+            terraform apply -auto-approve
+          shell: bash
+        - name: Upload tfstate
+          uses: actions/upload-artifact@v3
+          with:
+            name: terraform-state
+            path: aws-tf-gh-runner/terraform.tfstate
+            retention-days: 1
+        - name: Output Run Number
+          id: run_number
+          run: |
+            echo ::set-output name=GITHUB_RUN_NUMBER::${GITHUB_RUN_NUMBER}
+      outputs:
+        github_run_number: ${{steps.run_number.outputs.GITHUB_RUN_NUMBER}}
+
+  build:
+      name: build
+      runs-on: [self-hosted, "${{needs.start_runner.outputs.github_run_number}}"]
+      needs:
+        - start_runner
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v2
+          with:
+            fetch-depth: 0
+            
+        - name: Build
+          run: |
+            export DOCKER_BUILDKIT=1
+            docker build --platform=linux/arm64 -t pipeor-laravel .
+
+  stop_runner:
+      if: always()
+      name: stop_runner
+      runs-on: ubuntu-latest
+      needs:
+        - build
+
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v2
+          with:
+            fetch-depth: 0
+        - name: Set up tfswitch
+          run: |
+            curl -L https://raw.githubusercontent.com/warrensbox/terraform-switcher/release/install.sh | sudo bash
+            tfswitch $TF_VERSION
+        - name: Download tfstate
+          uses: actions/download-artifact@v3
+          with:
+            name: terraform-state
+            path: aws-tf-gh-runner/terraform-state
+        - name: Stop Runner
+          run: |
+            export TF_VAR_label=${GITHUB_RUN_NUMBER}
+            cd aws-tf-gh-runner
+            mv terraform-state/terraform.tfstate .
+            terraform init
+            terraform destroy -auto-approve
+          shell: bash

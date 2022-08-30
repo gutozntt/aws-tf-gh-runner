@@ -1,0 +1,6 @@
+.github
+.git
+.cache
+aws-tf-gh-runner/
+**/*.tf
+*.tf
