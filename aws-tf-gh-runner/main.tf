@@ -8,7 +8,7 @@ module "runner" {
   instance_type          = var.instance_type
   key_name               = var.key_name
   monitoring             = var.monitoring
-  iam_instance_profile   = var.iam_instance_profile
+  iam_instance_profile   = var.iam_instance_profile == null ? aws_iam_instance_profile.runner_instance_profile.name : var.iam_instance_profile
   vpc_security_group_ids = var.vpc_security_group_ids
   subnet_id              = var.subnet_id
 
@@ -18,4 +18,36 @@ module "runner" {
     Name      = var.runner_name
     Terraform = "true"
   }
+}
+
+resource "aws_iam_instance_profile" "runner_instance_profile" {
+  name  = "${var.runner_name}-${var.label}-role"
+  role  = aws_iam_role.runner_role.name
+}
+
+data "aws_iam_policy_document" "ec2_assume_role" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "runner_role" {
+  name               = "${var.runner_name}-${var.label}-role"
+  assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
+}
+
+resource "aws_iam_role_policy_attachment" "ssm" {
+  role       = aws_iam_role.runner_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_role_policy_attachment" "ecr" {
+  role       = aws_iam_role.runner_role.name
+  policy_arn = "arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilderECRContainerBuilds"
 }
