@@ -6,7 +6,7 @@ The goal of this project is to have on-demand Github runners on AWS to run your 
 
 In one of my projects, I was using Github Actions to build my amd64 docker images and I was satisfied with the performance and build time. Although, at some point, I realized I needed to have more Network Bandwidth in my AWS ECS EC2 Hosts. After reviewing the available instance types that AWS provides in my region, the best price-performance instance type that I found was a c6gn.large. Amazon EC2 C6gn instances are powered by Arm-based AWS Graviton2 processors and they offer generally a high network bandwith. To run my application in C6gn I would need to rebuild my docker image in arm64 architecture instead of amd64 like I was initially doing.
 
-### The Challenge
+## The Challenge
 
 Since currently Github does not provide arm64 runners and also do not support docker in their macos runners, the first solution I found was to build my arm64 images through the amd64 Github runners using QEMU and BUILDX.
 
@@ -25,7 +25,7 @@ Since currently Github does not provide arm64 runners and also do not support do
 
 The above method worked fine, however, my base image that usually took 5 minutes to build in amd64 started to take 55 minutes and my application image (on top of my base image) that usually took 2 minutes started to take 6 minutes. Waiting 55 minutes to build my base image was really out of scope and would slow down the development of the project. 
 
-### The Solution
+## The Solution
 
 The solution for the above challenges inspired me to create this automation project where you will have on-demand self-hosted runners on AWS to run your jobs. My use case is more related to docker builds but you really can use this for anything. In addition to that, you can configure your runners specifications all together with your pipeline yaml files. Keep reading for instructions and documentation.
 
