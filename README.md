@@ -38,11 +38,9 @@ The first thing you need to do is connect your repo to your AWS Account. To do t
 
 Once you have done that, you need to create the following two SSM Parameters in your AWS Account:
 
-- github-pat
-  This parameter will have on its value your Github Personal Access Token.
+- github-pat - This parameter will have on its value your Github Personal Access Token.
 
-- github-runner-context
-  This parameter will have on its value the Github Repository URL where you will register your runners.
+- github-runner-context - This parameter will have on its value the Github Repository URL where you will register your runners.
 
 Note: Make sure you create the SSM Parameters in the same region where you are willing to create your runners.
 
