@@ -10,7 +10,6 @@ env:
   AWS_SECRET_ACCESS_KEY: "${{ secrets.AWS_SECRET_ACCESS_KEY }}"
   TF_VERSION: 1.1.7
   TF_VAR_runner_name: github-runner
-  TF_VAR_ami: ami-05f3141013eebdc12
   TF_VAR_instance_type: t4g.nano
   TF_VAR_monitoring: true
   TF_VAR_subnet_id: subnet-0e3e862a4e38ec0e1
