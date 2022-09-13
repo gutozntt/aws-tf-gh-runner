@@ -1,4 +1,5 @@
 # On-Demand GitHub Self-Hosted Runners on AWS
+
 The goal of this project is to have on-demand Github runners on AWS to run your jobs. In this project, each workflow run will have its own runner on AWS. However, if you want to have one or more runners running all the time you can still benefit from the terraform code provided in aws-tf-gh-runner/ folder.
 
 ## Context (My Use Case)
@@ -50,18 +51,22 @@ Note: Make sure you create the SSM Parameters in the same region where you are w
 Now that we have our Github repository connected to our AWS Account and the SSM Parameters in place, we need to configure our Runners' specifications. All the settings are done through our workflow yaml file that you can find in .github/workflows/build.yaml. You will set the following options: 
 
 Mandatory:
+```
   TF_VAR_instance_type: t4g.nano
   TF_VAR_subnet_id: subnet-0e3e862a4e38ec0e1
   TF_VAR_vpc_security_group_ids: '["sg-07108abbdfbb0a56d"]'
   TF_VAR_region: us-east-1
   TF_VAR_runner_architecture: ARM64
+```
 
 Optional:
+```
   TF_VAR_runner_name:
   TF_VAR_ami:
   TF_VAR_key_name:
   TF_VAR_monitoring: 
   TF_VAR_iam_instance_profile:
+```
 
 The environment will automatically fetch the latest Amazon Linux 2 AMI based on the architecture that you choose. However, if you want to have a custom AMI with pre-installed tools, you just need to set the TF_VAR_ami. Make sure you use an Amazon Linux 2 image. 
 
@@ -90,3 +95,17 @@ The pipeline is currently configured to automatically trigger for any new push t
 For any custom build step or job that you want to add, you should place between the jobs "start_runner" and "stop_runner". You can use the job "build" as an example. The most important thing is to add the following line in your jobs:
 
 ```runs-on: [self-hosted, "${{needs.start_runner.outputs.github_run_number}}"]```
+
+## Important notes
+
+- Make sure you choose a right instance type based on the architecture you choose. Like t4g with ARM64 and t3 with x64.
+- This project uses Terraform to provision and deprovision the runners. The state files are local and handled as Artifacts in each workflow run.
+
+## Other Use Cases
+
+You don't need to use this automation project just if you need to build arm64 docker images faster. There are some other use cases where you will need to have self-hosted runners, for example: To run jobs that needs communication with private resources within your infrastructure such as database connections or you need to follow some compliance that does not allow to build your internal applications through external resources.
+
+# Conclusion
+
+Github Actions is a powerful tool to create CI/CD pipelines and make it easy to automate all your software workflows. On the other hand, AWS is a powerful cloud provider with a great set of services available to deploy any kind of application into the cloud. In this project we are integrating these two powerful services which gives us the ability to use On-Demand self-hosted Runners with different architectures, improving our build performance, being able to customize our runners, following security compliances and since you will not have runners running all the time, you will also be optimizing your costs.
+
