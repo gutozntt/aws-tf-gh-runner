@@ -1,10 +1,14 @@
+locals {
+  ami_id = var.runner_architecture == "x64" ? data.aws_ssm_parameter.amd_ami.value : data.aws_ssm_parameter.arm64_ami.value
+}
+
 module "runner" {
   source  = "terraform-aws-modules/ec2-instance/aws"
   version = "4.1.2"
 
   name = var.runner_name
 
-  ami                    = var.ami
+  ami                    = var.ami_id == null ? local.ami_id : var.ami_id
   instance_type          = var.instance_type
   key_name               = var.key_name
   monitoring             = var.monitoring
@@ -50,4 +54,12 @@ resource "aws_iam_role_policy_attachment" "ssm" {
 resource "aws_iam_role_policy_attachment" "ecr" {
   role       = aws_iam_role.runner_role.name
   policy_arn = "arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilderECRContainerBuilds"
+}
+
+data "aws_ssm_parameter" "amd_ami" {
+  name = "/aws/service/ami-amazon-linux-latest/amzn2-ami-kernel-5.10-hvm-x86_64-gp2"
+}
+
+data "aws_ssm_parameter" "arm64_ami" {
+  name = "/aws/service/ami-amazon-linux-latest/amzn2-ami-kernel-5.10-hvm-arm64-gp2"
 }

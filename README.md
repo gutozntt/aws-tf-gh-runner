@@ -1,6 +1,92 @@
-# aws-tf-gh-runner
-Project that runs Github Actions on AWS EC2 Runners On-Demand
+# On-Demand GitHub Self-Hosted Runners on AWS
+The goal of this project is to have on-demand Github runners on AWS to run your jobs. In this project, each workflow run will have its own runner on AWS. However, if you want to have one or more runners running all the time you can still benefit from the terraform code provided in aws-tf-gh-runner/ folder.
 
-WORK IN PROGRESS
+## Context (My Use Case)
 
-DOCUMENTATION COMING SOON
+In one of my projects, I was using Github Actions to build my amd64 docker images and I was satisfied with the performance and build time. Although, at some point, I realized I needed to have more Network Bandwidth in my AWS ECS EC2 Hosts. After reviewing the available instance types that AWS provides in my region, the best price-performance instance type that I found was a c6gn.large. Amazon EC2 C6gn instances are powered by Arm-based AWS Graviton2 processors and they offer generally a high network bandwith. To run my application in C6gn I would need to rebuild my docker image in arm64 architecture instead of amd64 like I was initially doing.
+
+### The Challenge
+
+Since currently Github does not provide arm64 runners and also do not support docker in their macos runners, the first solution I found was to build my arm64 images through the amd64 Github runners using QEMU and BUILDX.
+
+```
+        - name: Set up QEMU
+          uses: docker/setup-qemu-action@v2
+
+        - name: Set up Docker Buildx
+          id: buildx
+          uses: docker/setup-buildx-action@v2
+            
+        - name: Build
+          run: |
+            docker buildx build --platform=linux/arm64  .
+```
+
+The above method worked fine, however, my base image that usually took 5 minutes to build in amd64 started to take 55 minutes and my application image (on top of my base image) that usually took 2 minutes started to take 6 minutes. Waiting 55 minutes to build my base image was really out of scope and would slow down the development of the project. 
+
+### The Solution
+
+The solution for the above challenges inspired me to create this automation project where you will have on-demand self-hosted runners on AWS to run your jobs. My use case is more related to docker builds but you really can use this for anything. In addition to that, you can configure your runners specifications all together with your pipeline yaml files. Keep reading for instructions and documentation.
+
+# Get Started
+
+The first thing you need to do is connect your repo to your AWS Account. To do that, you need an AWS_ACCESS_KEY_ID and an AWS_SECRET_ACCESS_KEY. I recommend you create an user with Administrator privileges so we can run Terraform through it. Once you have the pair of keys, you need to create two repository secrets in Github Actions called exactly:
+
+- AWS_ACCESS_KEY_ID
+- AWS_SECRET_ACCESS_KEY
+
+Once you have done that, you need to create the following two SSM Parameters in your AWS Account:
+
+- github-pat
+  This parameter will have on its value your Github Personal Access Token.
+
+- github-runner-context
+  This parameter will have on its value the Github Repository URL where you will register your runners.
+
+Note: Make sure you create the SSM Parameters in the same region where you are willing to create your runners.
+
+## Configuring your Runners
+
+Now that we have our Github repository connected to our AWS Account and the SSM Parameters in place, we need to configure our Runners' specifications. All the settings are done through our workflow yaml file that you can find in .github/workflows/build.yaml. You will set the following options: 
+
+Mandatory:
+  TF_VAR_instance_type: t4g.nano
+  TF_VAR_subnet_id: subnet-0e3e862a4e38ec0e1
+  TF_VAR_vpc_security_group_ids: '["sg-07108abbdfbb0a56d"]'
+  TF_VAR_region: us-east-1
+  TF_VAR_runner_architecture: ARM64
+
+Optional:
+  TF_VAR_runner_name:
+  TF_VAR_ami:
+  TF_VAR_key_name:
+  TF_VAR_monitoring: 
+  TF_VAR_iam_instance_profile:
+
+The environment will automatically fetch the latest Amazon Linux 2 AMI based on the architecture that you choose. However, if you want to have a custom AMI with pre-installed tools, you just need to set the TF_VAR_ami. Make sure you use an Amazon Linux 2 image. 
+
+These variables set in the workflow yaml will be passed to the following Terraform variables:
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| <a name="input_ami"></a> [ami](#input\_ami) | AMI ID for your Runners. Must be Amazon Linux 2. | `string` | `null` | no |
+| <a name="input_iam_instance_profile"></a> [iam\_instance\_profile](#input\_iam\_instance\_profile) | IAM Role for your Runners. | `string` | `null` | no |
+| <a name="input_instance_type"></a> [instance\_type](#input\_instance\_type) | EC2 Instance Type for your Runners. | `string` | n/a | yes |
+| <a name="input_key_name"></a> [key\_name](#input\_key\_name) | EC2 Key Pair Name for your Runners. | `string` | `null` | no |
+| <a name="input_label"></a> [label](#input\_label) | Github Labels for your Runners. | `string` | n/a | yes |
+| <a name="input_monitoring"></a> [monitoring](#input\_monitoring) | Whether to enable monitoring for your Runners. | `bool` | `false` | no |
+| <a name="input_region"></a> [region](#input\_region) | AWS Region for your Runners. | `string` | n/a | yes |
+| <a name="input_runner_architecture"></a> [runner\_architecture](#input\_runner\_architecture) | Architecture for your Runners. It should be one of the following: x64, ARM or ARM64 | `string` | n/a | yes |
+| <a name="input_runner_name"></a> [runner\_name](#input\_runner\_name) | Name for your Runners. | `string` | `"github-runner"` | no |
+| <a name="input_subnet_id"></a> [subnet\_id](#input\_subnet\_id) | Subnet ID for your Runners. | `string` | n/a | yes |
+| <a name="input_vpc_security_group_ids"></a> [vpc\_security\_group\_ids](#input\_vpc\_security\_group\_ids) | List of Security Groups for your Runners. | `list(any)` | n/a | yes |
+
+## Running the Pipeline
+
+The pipeline is currently configured to automatically trigger for any new push to the main branch.
+
+## Customize build steps
+
+For any custom build step or job that you want to add, you should place between the jobs "start_runner" and "stop_runner". You can use the job "build" as an example. The most important thing is to add the following line in your jobs:
+
+```runs-on: [self-hosted, "${{needs.start_runner.outputs.github_run_number}}"]```

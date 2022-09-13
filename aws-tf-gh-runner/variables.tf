@@ -5,7 +5,8 @@ variable "runner_name" {
 }
 variable "ami" {
   type        = string
-  description = "AMI ID for your Runners."
+  description = "AMI ID for your Runners. Must be Amazon Linux 2."
+  default     = null
 }
 variable "instance_type" {
   type        = string
