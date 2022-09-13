@@ -8,7 +8,7 @@ module "runner" {
 
   name = var.runner_name
 
-  ami                    = var.ami_id == null ? local.ami_id : var.ami_id
+  ami                    = var.ami == null ? local.ami_id : var.ami
   instance_type          = var.instance_type
   key_name               = var.key_name
   monitoring             = var.monitoring
