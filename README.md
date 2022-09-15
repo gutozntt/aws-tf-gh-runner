@@ -1,14 +1,14 @@
 # On-Demand GitHub Self-Hosted Runners on AWS
 
-The goal of this project is to have on-demand Github runners on AWS to run your jobs. In this project, each workflow run will have its own runner on AWS. However, if you want to have one or more runners running all the time you can still benefit from the terraform code provided in aws-tf-gh-runner/ folder.
+The goal of this project is to have on-demand Github runners on AWS to run your jobs. In this project, each workflow run will have its own runner on AWS. However, if the desire is to have one or more runners running all the time you can still benefit from the terraform code provided in `aws-tf-gh-runner/` folder.
 
 ## Context (My Use Case)
 
-In one of my projects, I was using Github Actions to build my amd64 docker images and I was satisfied with the performance and build time. Although, at some point, I realized I needed to have more Network Bandwidth in my AWS ECS EC2 Hosts. After reviewing the available instance types that AWS provides in my region, the best price-performance instance type that I found was a c6gn.large. Amazon EC2 C6gn instances are powered by Arm-based AWS Graviton2 processors and they offer generally a high network bandwith. To run my application in C6gn I would need to rebuild my docker image in arm64 architecture instead of amd64 like I was initially doing.
+In another projects, I was using GitHub Actions to build amd64 docker images and was satisfied with the performance and build time. There was a realization for the need to have more Network Bandwidth for the AWS ECS EC2 Hosts. After reviewing the available instance types that AWS provides in this region, the best price-performance instance type that was found was a c6gn.large. Amazon EC2 c6gn instances are powered by ARM-based AWS Graviton2 processors, and they offer generally a high network bandwith. To run the application in c6gn, there would be a need to rebuild the docker image in arm64 architecture instead of amd64 like was initially happening.
 
 ## The Challenge
 
-Since currently Github does not provide arm64 runners and also do not support docker in their macos runners, the first solution I found was to build my arm64 images through the amd64 Github runners using QEMU and BUILDX.
+Currently GitHub does not provide arm64 runners and also does not support docker in their MacOS runners, the first solution found was to build arm64 images through the amd64 GitHub runners using QEMU and BUILDX.
 
 ```
         - name: Set up QEMU
@@ -23,11 +23,11 @@ Since currently Github does not provide arm64 runners and also do not support do
             docker buildx build --platform=linux/arm64  .
 ```
 
-The above method worked fine, however, my base image that usually took 5 minutes to build in amd64 started to take 55 minutes and my application image (on top of my base image) that usually took 2 minutes started to take 6 minutes. Waiting 55 minutes to build my base image was really out of scope and would slow down the development of the project. 
+The above method worked, however, the base image that usually took 5 minutes to build in amd64 started to take 55 minutes and the application image (on top of my base image) that usually took 2 minutes started to take 6 minutes. Waiting 55 minutes to build the base image was really out of scope and would slow down the CI/CD process. 
 
 ## The Solution
 
-The solution for the above challenges inspired me to create this automation project where you will have on-demand self-hosted runners on AWS to run your jobs. My use case is more related to docker builds but you really can use this for anything. In addition to that, you can configure your runners specifications all together with your pipeline yaml files. Keep reading for instructions and documentation.
+The solution for the above challenges inspired creation of this automation project where there will have on-demand self-hosted runners on AWS to run the project jobs. This use case is more related to docker builds but it really can be used for anything. In addition to that, runners can be configured with whatever specifications with the project pipeline yaml files. Keep reading for instructions and documentation.
 
 # Get Started
 
