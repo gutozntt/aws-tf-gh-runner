@@ -1,0 +1,22 @@
+name: Build
+on: 
+   push:
+     branches:
+       - 'test/performance'
+
+jobs:
+  build:
+      name: build
+      runs-on: ubuntu-latest
+      needs:
+        - start_runner
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v2
+          with:
+            fetch-depth: 0
+            
+        - name: Build
+          run: |
+            export DOCKER_BUILDKIT=1
+            docker build --platform=linux/arm64 -t gihub-runner-lab .
