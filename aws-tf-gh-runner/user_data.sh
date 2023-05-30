@@ -18,8 +18,8 @@ yum install git make libicu60 jq -y
 
 # install github runner application
 sudo -u ec2-user mkdir /home/ec2-user/actions-runner
-sudo -u ec2-user curl -o /home/ec2-user/actions-runner/actions-runner-linux-$${ARCH}-2.296.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.296.0/actions-runner-linux-$${ARCH}-2.296.0.tar.gz
-sudo -u ec2-user tar xzf /home/ec2-user/actions-runner/actions-runner-linux-$${ARCH}-2.296.0.tar.gz -C /home/ec2-user/actions-runner
+sudo -u ec2-user curl -o /home/ec2-user/actions-runner/actions-runner-linux-$${ARCH}-2.304.0.tar.gz -L https://github.com/actions/runner/releases/download/v2.304.0/actions-runner-linux-$${ARCH}-2.304.0.tar.gz
+sudo -u ec2-user tar xzf /home/ec2-user/actions-runner/actions-runner-linux-$${ARCH}-2.304.0.tar.gz -C /home/ec2-user/actions-runner
 
 RUNNER_NAME="aws-runner-$${LABEL}"
 RUNNER_WORKDIR=$${RUNNER_WORKDIR:-_work}
